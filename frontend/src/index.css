@@ -1,0 +1,115 @@
+@import url('https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;500;600;700&family=DM+Sans:wght@300;400;500;600&family=JetBrains+Mono:wght@400;500&display=swap');
+
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+/* ── Base ─────────────────────────────────────────── */
+body {
+  @apply bg-[#070d1a] text-slate-100 antialiased;
+  font-family: 'DM Sans', system-ui, sans-serif;
+  overflow-x: hidden;
+}
+
+/* ── Animated mesh background ─────────────────────── */
+body::before {
+  content: '';
+  position: fixed;
+  inset: 0;
+  background-image:
+    radial-gradient(ellipse 80% 60% at 0% 0%,    rgba(65,214,173,0.06) 0%, transparent 60%),
+    radial-gradient(ellipse 60% 50% at 100% 100%, rgba(167,139,250,0.07) 0%, transparent 60%),
+    radial-gradient(circle at 50% 50%,             rgba(34,211,238,0.03) 0%, transparent 70%);
+  pointer-events: none;
+  z-index: 0;
+}
+
+/* ── Dot grid overlay ──────────────────────────────── */
+body::after {
+  content: '';
+  position: fixed;
+  inset: 0;
+  background-image: radial-gradient(circle, rgba(255,255,255,0.04) 1px, transparent 1px);
+  background-size: 36px 36px;
+  pointer-events: none;
+  z-index: 0;
+}
+
+#root {
+  position: relative;
+  z-index: 1;
+}
+
+/* ── Glassmorphism card ────────────────────────────── */
+@layer components {
+  .glass-card {
+    @apply rounded-2xl backdrop-blur-sm;
+    border: 1px solid rgba(255,255,255,0.08);
+    background: linear-gradient(135deg, rgba(255,255,255,0.06) 0%, rgba(255,255,255,0.02) 100%);
+  }
+
+  .glass-card-glow-mint {
+    @apply glass-card;
+    border-color: rgba(65,214,173,0.2);
+    box-shadow: 0 0 0 1px rgba(65,214,173,0.08), inset 0 1px 0 rgba(255,255,255,0.05);
+  }
+
+  .glass-card-glow-amber {
+    @apply glass-card;
+    border-color: rgba(244,191,79,0.2);
+    box-shadow: 0 0 0 1px rgba(244,191,79,0.08), inset 0 1px 0 rgba(255,255,255,0.05);
+  }
+
+  .glass-card-glow-coral {
+    @apply glass-card;
+    border-color: rgba(255,122,102,0.25);
+    box-shadow: 0 0 0 1px rgba(255,122,102,0.12), inset 0 1px 0 rgba(255,255,255,0.05);
+  }
+
+  .glass-card-glow-cyan {
+    @apply glass-card;
+    border-color: rgba(34,211,238,0.2);
+    box-shadow: 0 0 0 1px rgba(34,211,238,0.08), inset 0 1px 0 rgba(255,255,255,0.05);
+  }
+
+  .glass-card-glow-purple {
+    @apply glass-card;
+    border-color: rgba(167,139,250,0.2);
+    box-shadow: 0 0 0 1px rgba(167,139,250,0.08), inset 0 1px 0 rgba(255,255,255,0.05);
+  }
+
+  .terminal {
+    font-family: 'JetBrains Mono', monospace;
+    @apply text-xs leading-relaxed;
+  }
+
+  .text-glow-mint  { text-shadow: 0 0 12px rgba(65,214,173,0.6); }
+  .text-glow-amber { text-shadow: 0 0 12px rgba(244,191,79,0.6); }
+  .text-glow-coral { text-shadow: 0 0 12px rgba(255,122,102,0.7); }
+  .text-glow-cyan  { text-shadow: 0 0 12px rgba(34,211,238,0.6); }
+}
+
+/* ── Scrollbar ─────────────────────────────────────── */
+::-webkit-scrollbar       { width: 4px; }
+::-webkit-scrollbar-track { background: transparent; }
+::-webkit-scrollbar-thumb { background: rgba(255,255,255,0.1); border-radius: 2px; }
+::-webkit-scrollbar-thumb:hover { background: rgba(255,255,255,0.2); }
+
+/* ── SVG donut gauge animation ────────────────────── */
+.donut-ring {
+  transition: stroke-dashoffset 1.2s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+/* ── Pipeline connector flow animation ─────────────── */
+@keyframes flow {
+  0%   { stroke-dashoffset: 28; }
+  100% { stroke-dashoffset: 0; }
+}
+.pipeline-flow {
+  animation: flow 1.2s linear infinite;
+  stroke-dasharray: 4 10;
+}
+
+/* ── Blink cursor ──────────────────────────────────── */
+@keyframes blink { 0%,100% { opacity:1 } 50% { opacity:0 } }
+.cursor-blink { animation: blink 1s step-end infinite; }
