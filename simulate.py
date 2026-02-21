@@ -1,6 +1,6 @@
 """
 simulate.py — StockPulse Data Simulator
-Generates 6 months of realistic supermarket data with seasonal patterns
+Generates 2 years of realistic supermarket data with seasonal patterns
 and pushes everything to Supabase.
 
 Usage:
@@ -21,6 +21,26 @@ SUPABASE_URL = os.environ["SUPABASE_URL"]
 SUPABASE_KEY = os.environ["SUPABASE_KEY"]
 
 supabase: Client = create_client(SUPABASE_URL, SUPABASE_KEY)
+
+# Number of historical days to generate (2 years ≈ 730 days)
+DAYS_BACK = 730
+
+# Keep frontline stock levels realistic and non-zero so the demo and
+# Braintrust evals always have interesting signals (no empty shelves at start).
+STOCK_SCENARIO = {
+    "SKU-001": 320,  # Milk — low-ish in December
+    "SKU-002": 890,  # Beans — healthy buffer
+    "SKU-003": 85,   # Paracetamol — critical
+    "SKU-004": 45,   # Pumpkin Soup — season ending
+    "SKU-005": 180,  # Energy Drinks — demand spike
+    "SKU-006": 140,  # Sourdough — daily replenishment
+    "SKU-007": 260,  # Eggs — staple
+    "SKU-008": 380,  # Bananas — fast produce
+    "SKU-009": 220,  # Chicken — fresh protein
+    "SKU-010": 520,  # Sparkling Water — high volume
+    "SKU-011": 160,  # Avocados — trending produce
+    "SKU-012": 310,  # Granola — steady CPG
+}
 
 # Seed for reproducibility
 random.seed(42)
@@ -85,6 +105,83 @@ PRODUCTS = [
         "shelf_life_days": 365,
         "daily_velocity": None,
     },
+    {
+        "sku": "SKU-006",
+        "name": "Artisan Sourdough",
+        "category": "Bakery",
+        "current_stock": 140,
+        "reorder_point": 160,
+        "safety_stock": 60,
+        "unit_cost": 1.40,
+        "shelf_life_days": 3,
+        "daily_velocity": None,
+    },
+    {
+        "sku": "SKU-007",
+        "name": "Free-Range Eggs (12)",
+        "category": "Dairy",
+        "current_stock": 260,
+        "reorder_point": 220,
+        "safety_stock": 90,
+        "unit_cost": 1.85,
+        "shelf_life_days": 21,
+        "daily_velocity": None,
+    },
+    {
+        "sku": "SKU-008",
+        "name": "Bananas (kg)",
+        "category": "Produce",
+        "current_stock": 380,
+        "reorder_point": 320,
+        "safety_stock": 140,
+        "unit_cost": 0.85,
+        "shelf_life_days": 5,
+        "daily_velocity": None,
+    },
+    {
+        "sku": "SKU-009",
+        "name": "Chicken Breast (kg)",
+        "category": "Meat",
+        "current_stock": 220,
+        "reorder_point": 200,
+        "safety_stock": 80,
+        "unit_cost": 4.10,
+        "shelf_life_days": 7,
+        "daily_velocity": None,
+    },
+    {
+        "sku": "SKU-010",
+        "name": "Sparkling Water 500ml",
+        "category": "Beverages",
+        "current_stock": 520,
+        "reorder_point": 420,
+        "safety_stock": 160,
+        "unit_cost": 0.42,
+        "shelf_life_days": 365,
+        "daily_velocity": None,
+    },
+    {
+        "sku": "SKU-011",
+        "name": "Hass Avocados (4-pack)",
+        "category": "Produce",
+        "current_stock": 160,
+        "reorder_point": 140,
+        "safety_stock": 70,
+        "unit_cost": 2.10,
+        "shelf_life_days": 6,
+        "daily_velocity": None,
+    },
+    {
+        "sku": "SKU-012",
+        "name": "Honey Granola 750g",
+        "category": "Cereals",
+        "current_stock": 310,
+        "reorder_point": 260,
+        "safety_stock": 110,
+        "unit_cost": 2.80,
+        "shelf_life_days": 540,
+        "daily_velocity": None,
+    },
 ]
 
 SUPPLIERS = [
@@ -100,11 +197,47 @@ SUPPLIERS = [
     {
         "supplier_id": "SUPPLIER-B",
         "name": "NationalDist Ltd",
-        "sku": "SKU-002",          # primary sku; also supplies 003/004/005
+        "sku": "SKU-002",          # primary sku; also supplies 003/004/005/010/012
         "predicted_lead_days": 10,
         "actual_lead_days": 10.1,
         "reliability_score": 95,
         "notes": "Highly consistent. No seasonal variance observed.",
+    },
+    {
+        "supplier_id": "SUPPLIER-C",
+        "name": "FreshFields Produce",
+        "sku": "SKU-008",          # bananas, avocados
+        "predicted_lead_days": 4,
+        "actual_lead_days": 4.3,
+        "reliability_score": 90,
+        "notes": "Produce freshness focused; minor weather variability.",
+    },
+    {
+        "supplier_id": "SUPPLIER-D",
+        "name": "MeadowMeat",
+        "sku": "SKU-009",
+        "predicted_lead_days": 6,
+        "actual_lead_days": 6.2,
+        "reliability_score": 88,
+        "notes": "Chilled chain; minor Friday delays.",
+    },
+    {
+        "supplier_id": "SUPPLIER-E",
+        "name": "BakeHouse Collective",
+        "sku": "SKU-006",
+        "predicted_lead_days": 2,
+        "actual_lead_days": 2.4,
+        "reliability_score": 86,
+        "notes": "Fresh daily bakery runs; weekends slower.",
+    },
+    {
+        "supplier_id": "SUPPLIER-F",
+        "name": "Staple Farms",
+        "sku": "SKU-007",
+        "predicted_lead_days": 5,
+        "actual_lead_days": 5.1,
+        "reliability_score": 92,
+        "notes": "Eggs supply stable; slight Easter uplift.",
     },
 ]
 
@@ -116,6 +249,7 @@ SUPPLIERS = [
 def daily_units(sku: str, sale_date: date, days_ago: int) -> int:
     """Return simulated units sold for a SKU on a given date."""
     month = sale_date.month
+    weekday = sale_date.weekday()  # 0 = Mon
 
     if sku == "SKU-001":  # Fresh Whole Milk
         base = 200
@@ -165,6 +299,54 @@ def daily_units(sku: str, sale_date: date, days_ago: int) -> int:
         noise = random.uniform(-0.10, 0.10)
         return max(1, int(base * (1 + noise)))
 
+    elif sku == "SKU-006":  # Artisan Sourdough
+        base = 120 if weekday < 5 else 90  # slightly lower on weekends
+        noise = random.uniform(-0.12, 0.12)
+        return max(1, int(base * (1 + noise)))
+
+    elif sku == "SKU-007":  # Free-Range Eggs
+        base = 110
+        # Easter uplift (~April)
+        if month == 3 or month == 4:
+            base = int(base * 1.25)
+        noise = random.uniform(-0.08, 0.08)
+        return max(1, int(base * (1 + noise)))
+
+    elif sku == "SKU-008":  # Bananas
+        base = 190
+        noise = random.uniform(-0.10, 0.10)
+        return max(1, int(base * (1 + noise)))
+
+    elif sku == "SKU-009":  # Chicken Breast
+        base = 95
+        if weekday in (4, 5):  # Fri/Sat barbecue bump
+            base = int(base * 1.20)
+        noise = random.uniform(-0.10, 0.10)
+        return max(1, int(base * (1 + noise)))
+
+    elif sku == "SKU-010":  # Sparkling Water
+        base = 210
+        # Summer uplift June-August
+        if month in (6, 7, 8):
+            base = int(base * 1.30)
+        noise = random.uniform(-0.08, 0.08)
+        return max(1, int(base * (1 + noise)))
+
+    elif sku == "SKU-011":  # Avocados
+        base = 70
+        # January healthy eating spike
+        if month == 1:
+            base = int(base * 1.35)
+        noise = random.uniform(-0.12, 0.12)
+        return max(1, int(base * (1 + noise)))
+
+    elif sku == "SKU-012":  # Honey Granola
+        base = 75
+        if month == 1:
+            base = int(base * 1.20)
+        noise = random.uniform(-0.08, 0.08)
+        return max(1, int(base * (1 + noise)))
+
     return 0
 
 
@@ -190,8 +372,8 @@ def build_sales_rows() -> tuple[list[dict], dict[str, float]]:
     velocities: dict[str, float] = {}
 
     for sku in skus:
-        # Build 180 days oldest→newest
-        days = list(range(179, -1, -1))  # 179 days ago → today
+        # Build N days oldest→newest
+        days = list(range(DAYS_BACK - 1, -1, -1))  # e.g., 729 days ago → today
         units_series = []
         date_series = []
 
@@ -535,6 +717,60 @@ def build_purchase_orders() -> list[dict]:
         "prediction_error": 0,
     })
 
+    orders.append({
+        "po_id": str(uuid.uuid4()),
+        "sku": "SKU-006",
+        "supplier_id": "SUPPLIER-E",
+        "quantity_ordered": 260,
+        "ordered_at": ts(24),
+        "predicted_arrival": arrival(24, 2),
+        "actual_arrival": arrival(24, 2),
+        "status": "delivered",
+        "agent_reasoning": (
+            "Sourdough runs low ahead of weekend. Velocity 120/day weekdays, 90/day weekends. "
+            "Two-day lead time, ordered 260 to cover next two days plus buffer."
+        ),
+        "stockout_days": 0,
+        "waste_units": 6,
+        "prediction_error": 0,
+    })
+
+    orders.append({
+        "po_id": str(uuid.uuid4()),
+        "sku": "SKU-007",
+        "supplier_id": "SUPPLIER-F",
+        "quantity_ordered": 400,
+        "ordered_at": ts(22),
+        "predicted_arrival": arrival(22, 5),
+        "actual_arrival": arrival(22, 5),
+        "status": "delivered",
+        "agent_reasoning": (
+            "Eggs velocity stable at 110/day. Easter uplift tapering. "
+            "Ordered 400 units to maintain 4-day cover plus safety stock."
+        ),
+        "stockout_days": 0,
+        "waste_units": 12,
+        "prediction_error": 0,
+    })
+
+    orders.append({
+        "po_id": str(uuid.uuid4()),
+        "sku": "SKU-010",
+        "supplier_id": "SUPPLIER-B",
+        "quantity_ordered": 900,
+        "ordered_at": ts(21),
+        "predicted_arrival": arrival(21, 10),
+        "actual_arrival": arrival(21, 10),
+        "status": "delivered",
+        "agent_reasoning": (
+            "Sparkling Water demand rising into summer. Velocity 210/day. "
+            "Ordering 900 units to cover 4 days plus warehouse buffer."
+        ),
+        "stockout_days": 0,
+        "waste_units": 0,
+        "prediction_error": 0,
+    })
+
     # ── CYCLE 6 — 2 weeks ago (~14 days) — Agent nails it ─────────────
     # Near-perfect performance across all SKUs
 
@@ -597,6 +833,60 @@ def build_purchase_orders() -> list[dict]:
         "prediction_error": 0,
     })
 
+    orders.append({
+        "po_id": str(uuid.uuid4()),
+        "sku": "SKU-009",
+        "supplier_id": "SUPPLIER-D",
+        "quantity_ordered": 280,
+        "ordered_at": ts(13),
+        "predicted_arrival": arrival(13, 6),
+        "actual_arrival": arrival(13, 6),
+        "status": "delivered",
+        "agent_reasoning": (
+            "Chicken breast at 220 units, velocity 100/day with weekend bumps. "
+            "Lead time 6 days. Ordering 280 to cover 3 days plus safety stock."
+        ),
+        "stockout_days": 0,
+        "waste_units": 5,
+        "prediction_error": 0,
+    })
+
+    orders.append({
+        "po_id": str(uuid.uuid4()),
+        "sku": "SKU-008",
+        "supplier_id": "SUPPLIER-C",
+        "quantity_ordered": 500,
+        "ordered_at": ts(11),
+        "predicted_arrival": arrival(11, 4),
+        "actual_arrival": None,           # pending
+        "status": "pending",
+        "agent_reasoning": (
+            "Bananas moving at 190/day. FreshFields lead time 4 days. "
+            "Ordering 500 to maintain 2.5 days cover with ripeness buffer."
+        ),
+        "stockout_days": 0,
+        "waste_units": 0,
+        "prediction_error": 0,
+    })
+
+    orders.append({
+        "po_id": str(uuid.uuid4()),
+        "sku": "SKU-011",
+        "supplier_id": "SUPPLIER-C",
+        "quantity_ordered": 260,
+        "ordered_at": ts(9),
+        "predicted_arrival": arrival(9, 4),
+        "actual_arrival": arrival(9, 4),
+        "status": "delivered",
+        "agent_reasoning": (
+            "Avocado velocity 70/day; January spike subsided but still elevated. "
+            "Ordering 260 for 3+ days cover; managing ripeness stages to avoid waste."
+        ),
+        "stockout_days": 0,
+        "waste_units": 8,
+        "prediction_error": 0,
+    })
+
     return orders
 
 
@@ -621,9 +911,12 @@ def main():
     print("Generating sales data...")
     sales_rows, velocities = build_sales_rows()
 
-    # ── 2. Attach computed velocities to products ──
+    # ── 2. Attach computed velocities to products and pin realistic stock levels ──
     for product in PRODUCTS:
         product["daily_velocity"] = round(velocities[product["sku"]], 2)
+        # Ensure current_stock is set to the scenario values (never zero)
+        # so dashboards + evals see meaningful, non-empty shelves.
+        product["current_stock"] = STOCK_SCENARIO.get(product["sku"], product["current_stock"])
 
     # ── 3. Insert products ──
     supabase.table("products").insert(PRODUCTS).execute()
@@ -637,7 +930,7 @@ def main():
         supabase.table("sales").insert(batch).execute()
         total_inserted += len(batch)
 
-    print(f"Inserted {total_inserted} sales records (180 days x {len(PRODUCTS)} SKUs)")
+    print(f"Inserted {total_inserted} sales records ({DAYS_BACK} days x {len(PRODUCTS)} SKUs)")
 
     # ── 5. Insert suppliers ──
     supabase.table("suppliers").insert(SUPPLIERS).execute()

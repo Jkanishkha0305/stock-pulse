@@ -1,0 +1,11 @@
+{
+    "servers": {
+        "braintrust": {
+            "type": "http",
+            "url": "https://api.braintrust.dev/mcp",
+            "headers": {
+                "Authorization": "Bearer sk-cIiUuqJ1L0ypolG08Kga1o7evcj5O4vO7aoRVcQjaLzBll2i"
+            }
+        }
+    }
+}
