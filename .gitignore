@@ -208,6 +208,7 @@ __marimo__/
 
 # Node
 node_modules/
+node_modules
 frontend/dist/
 .npm
 
