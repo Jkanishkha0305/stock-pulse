@@ -1,0 +1,11 @@
+version: 2
+
+models:
+  - name: stock_health
+    description: Current stock, velocity and reorder signals by SKU.
+  - name: po_timeline
+    description: Purchase order timeline and order reasoning.
+  - name: lead_time_accuracy
+    description: Supplier lead-time prediction accuracy.
+  - name: stockpulse_kpis
+    description: Pipeline KPI summary for outcomes and loss indicators.
