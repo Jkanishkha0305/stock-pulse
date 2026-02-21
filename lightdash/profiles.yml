@@ -1,0 +1,14 @@
+stockpulse:
+  target: dev
+  outputs:
+    dev:
+      type: postgres
+      host: db.stvbtrkwclnzoyvedcxa.supabase.co
+      port: 5432
+      user: postgres
+      password: "YOUR_SUPABASE_DB_PASSWORD"   # ← paste from Supabase → Settings → Database
+      dbname: postgres
+      schema: public
+      threads: 1
+      connect_timeout: 10
+      sslmode: require

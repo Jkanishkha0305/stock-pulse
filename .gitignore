@@ -210,3 +210,7 @@ __marimo__/
 node_modules/
 frontend/dist/
 .npm
+
+# Allow frontend src/lib
+\!frontend/src/lib/
+\!frontend/src/lib/**

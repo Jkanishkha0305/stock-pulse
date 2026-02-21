@@ -1,0 +1,414 @@
+version: 2
+
+models:
+  - name: products
+    description: "Live product inventory with computed stock status and days remaining"
+    columns:
+      - name: sku
+        description: "Stock keeping unit identifier"
+        meta:
+          dimension:
+            type: string
+      - name: name
+        description: "Product name"
+        meta:
+          dimension:
+            type: string
+      - name: category
+        description: "Product category"
+        meta:
+          dimension:
+            type: string
+      - name: current_stock
+        description: "Current units in stock"
+        meta:
+          dimension:
+            type: number
+          metrics:
+            total_stock:
+              type: sum
+              label: "Total Stock Units"
+            avg_stock:
+              type: average
+              label: "Avg Stock per SKU"
+      - name: reorder_point
+        description: "Units threshold that triggers reorder"
+        meta:
+          dimension:
+            type: number
+      - name: safety_stock
+        description: "Minimum buffer stock to hold"
+        meta:
+          dimension:
+            type: number
+      - name: unit_cost
+        description: "Cost per unit in GBP"
+        meta:
+          dimension:
+            type: number
+          metrics:
+            avg_unit_cost:
+              type: average
+              label: "Avg Unit Cost (£)"
+      - name: shelf_life_days
+        description: "Days until product expires"
+        meta:
+          dimension:
+            type: number
+      - name: daily_velocity
+        description: "Average daily units sold"
+        meta:
+          dimension:
+            type: number
+          metrics:
+            avg_daily_velocity:
+              type: average
+              label: "Avg Daily Velocity"
+      - name: stock_status
+        description: "CRITICAL (<= 2 days), LOW (<= 7 days), or OK"
+        meta:
+          dimension:
+            type: string
+      - name: days_remaining
+        description: "Days of stock left at current velocity"
+        meta:
+          dimension:
+            type: number
+          metrics:
+            avg_days_remaining:
+              type: average
+              label: "Avg Days Remaining"
+            min_days_remaining:
+              type: min
+              label: "Min Days Remaining (most urgent)"
+      - name: days_remaining_status
+        description: "Traffic light: Green (14+ days), Amber (7-14), Red (under 7)"
+        meta:
+          dimension:
+            type: string
+
+  - name: sales
+    description: "Historical sales transactions"
+    columns:
+      - name: id
+        description: "Sale record ID"
+        meta:
+          dimension:
+            type: number
+      - name: sku
+        description: "Product SKU"
+        meta:
+          dimension:
+            type: string
+      - name: quantity_sold
+        description: "Units sold in this transaction"
+        meta:
+          dimension:
+            type: number
+          metrics:
+            total_quantity_sold:
+              type: sum
+              label: "Total Units Sold"
+            avg_quantity_sold:
+              type: average
+              label: "Avg Units per Sale"
+      - name: sale_date
+        description: "Date of sale"
+        meta:
+          dimension:
+            type: date
+            time_intervals: ["DAY", "WEEK", "MONTH"]
+      - name: sale_week
+        description: "Week of sale (truncated)"
+        meta:
+          dimension:
+            type: date
+      - name: sale_month
+        description: "Month of sale (truncated)"
+        meta:
+          dimension:
+            type: date
+      - name: velocity_7day_avg
+        description: "7-day rolling average units sold (for velocity charts)"
+        meta:
+          dimension:
+            type: number
+          metrics:
+            avg_velocity:
+              type: average
+              label: "Avg 7-day Velocity"
+
+  - name: suppliers
+    description: "Vendor / supplier master data"
+    columns:
+      - name: id
+        description: "Supplier ID (e.g. SUP-A)"
+        meta:
+          dimension:
+            type: string
+      - name: name
+        description: "Supplier name"
+        meta:
+          dimension:
+            type: string
+      - name: sku
+        description: "SKU this supplier provides"
+        meta:
+          dimension:
+            type: string
+      - name: predicted_lead_days
+        description: "Expected lead time in days"
+        meta:
+          dimension:
+            type: number
+          metrics:
+            avg_predicted_lead_days:
+              type: average
+              label: "Avg Predicted Lead (days)"
+      - name: actual_lead_days
+        description: "Actual lead time (updated after delivery)"
+        meta:
+          dimension:
+            type: number
+          metrics:
+            avg_actual_lead_days:
+              type: average
+              label: "Avg Actual Lead (days)"
+      - name: reliability_score
+        description: "Supplier reliability score (0-100)"
+        meta:
+          dimension:
+            type: number
+          metrics:
+            avg_reliability:
+              type: average
+              label: "Avg Reliability Score"
+      - name: notes
+        description: "Supplier notes (e.g. slow in January)"
+        meta:
+          dimension:
+            type: string
+
+  - name: purchase_orders
+    description: "AI-placed purchase orders with vendor negotiation outcomes"
+    columns:
+      - name: po_id
+        description: "Purchase order UUID"
+        meta:
+          dimension:
+            type: string
+      - name: sku
+        description: "Product SKU ordered"
+        meta:
+          dimension:
+            type: string
+      - name: supplier_id
+        description: "Winning vendor ID"
+        meta:
+          dimension:
+            type: string
+      - name: quantity_ordered
+        description: "Units ordered"
+        meta:
+          dimension:
+            type: number
+          metrics:
+            total_units_ordered:
+              type: sum
+              label: "Total Units Ordered"
+            avg_order_size:
+              type: average
+              label: "Avg Order Size"
+      - name: ordered_at
+        description: "Timestamp when PO was placed"
+        meta:
+          dimension:
+            type: timestamp
+            time_intervals: ["DAY", "WEEK", "MONTH"]
+      - name: predicted_arrival
+        description: "Predicted delivery date"
+        meta:
+          dimension:
+            type: date
+      - name: actual_arrival
+        description: "Actual delivery date (null if pending)"
+        meta:
+          dimension:
+            type: date
+      - name: status
+        description: "Order status: pending, delivered, cancelled"
+        meta:
+          dimension:
+            type: string
+      - name: agent_reasoning
+        description: "AI reasoning for the order decision"
+        meta:
+          dimension:
+            type: string
+      - name: arrival_delta_days
+        description: "Prediction error in days (actual - predicted)"
+        meta:
+          dimension:
+            type: number
+          metrics:
+            avg_prediction_error:
+              type: average
+              label: "Avg Prediction Error (days)"
+      - name: predicted_lead_days
+        description: "Expected days from order to arrival"
+        meta:
+          dimension:
+            type: number
+          metrics:
+            avg_predicted_lead_days:
+              type: average
+              label: "Avg Predicted Lead (days)"
+      - name: actual_lead_days
+        description: "Actual days from order to arrival (when delivered)"
+        meta:
+          dimension:
+            type: number
+          metrics:
+            avg_actual_lead_days:
+              type: average
+              label: "Avg Actual Lead (days)"
+
+  - name: agent_cycles
+    description: "Agent run history with accuracy and signal context"
+    columns:
+      - name: id
+        description: "Cycle record ID"
+        meta:
+          dimension:
+            type: number
+      - name: cycle_index
+        description: "Sequential cycle number"
+        meta:
+          dimension:
+            type: number
+      - name: accuracy
+        description: "Agent accuracy percentage for this cycle"
+        meta:
+          dimension:
+            type: number
+          metrics:
+            avg_accuracy:
+              type: average
+              label: "Avg Agent Accuracy (%)"
+            latest_accuracy:
+              type: max
+              label: "Latest Accuracy (%)"
+      - name: timestamp
+        description: "When this cycle ran"
+        meta:
+          dimension:
+            type: timestamp
+            time_intervals: ["DAY", "WEEK"]
+      - name: orders_placed
+        description: "Number of POs placed in this cycle"
+        meta:
+          dimension:
+            type: number
+          metrics:
+            total_orders_placed:
+              type: sum
+              label: "Total Orders Placed"
+      - name: temperature_c
+        description: "Weather temperature at cycle time (°C)"
+        meta:
+          dimension:
+            type: number
+      - name: season_name
+        description: "Season during this cycle"
+        meta:
+          dimension:
+            type: string
+      - name: flu_season
+        description: "Whether flu season was active"
+        meta:
+          dimension:
+            type: string
+
+  - name: inventory_level_timeline
+    description: "Estimated stock level per SKU per day (last 30 days) for Chart 1"
+    columns:
+      - name: stock_date
+        description: "Date of snapshot"
+        meta:
+          dimension:
+            type: date
+            time_intervals: ["DAY"]
+      - name: sku
+        description: "Product SKU"
+        meta:
+          dimension:
+            type: string
+      - name: name
+        description: "Product name"
+        meta:
+          dimension:
+            type: string
+      - name: stock_level
+        description: "Estimated units in stock at end of day"
+        meta:
+          dimension:
+            type: number
+          metrics:
+            total_stock_level:
+              type: sum
+              label: "Total Stock (all SKUs)"
+
+  - name: sales_velocity_monthly
+    description: "Velocity and units sold per SKU per month for Chart 5 (seasonal patterns)"
+    columns:
+      - name: sale_month
+        description: "Month"
+        meta:
+          dimension:
+            type: date
+            time_intervals: ["MONTH"]
+      - name: sku
+        description: "Product SKU"
+        meta:
+          dimension:
+            type: string
+      - name: velocity_avg
+        description: "Average 7-day velocity in this month"
+        meta:
+          dimension:
+            type: number
+          metrics:
+            avg_velocity:
+              type: average
+              label: "Avg Velocity"
+      - name: units_sold_total
+        description: "Total units sold in this month"
+        meta:
+          dimension:
+            type: number
+          metrics:
+            total_units:
+              type: sum
+              label: "Total Units Sold"
+
+  - name: stockouts_avoided_metrics
+    description: "Single-number metrics for Chart 6 (stockouts avoided, value saved)"
+    columns:
+      - name: stockouts_avoided_this_month
+        description: "Number of replenishment orders (POs) placed this month"
+        meta:
+          dimension:
+            type: number
+          metrics:
+            stockouts_avoided:
+              type: sum
+              label: "Stockouts Avoided (this month)"
+      - name: value_saved_gbp
+        description: "Value of inventory replenished this month (£)"
+        meta:
+          dimension:
+            type: number
+          metrics:
+            value_saved:
+              type: sum
+              label: "Value Saved / Replenished (£)"

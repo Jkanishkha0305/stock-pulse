@@ -1,0 +1,14 @@
+name: stockpulse
+version: '1.0.0'
+config-version: 2
+
+profile: stockpulse
+
+model-paths: ["models"]
+target-path: "target"
+clean-targets: ["target", "dbt_packages"]
+
+models:
+  stockpulse:
+    +materialized: view
+    +schema: public
